@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>영어 지문 처리기</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 24px 16px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 1.8rem;
+            margin-bottom: 24px;
+            color: #1a1a2e;
+        }
+
+        /* Mode Selection */
+        .mode-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .mode-btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .mode-btn:hover { border-color: #6c63ff; }
+        .mode-btn.active {
+            border-color: #6c63ff;
+            background: #6c63ff;
+            color: white;
+        }
+        .mode-btn .desc {
+            font-size: 0.75rem;
+            font-weight: 400;
+            margin-top: 4px;
+            opacity: 0.8;
+        }
+
+        /* Custom Prompt */
+        .custom-prompt-area {
+            display: none;
+            margin-bottom: 20px;
+        }
+        .custom-prompt-area.visible { display: block; }
+        .custom-prompt-area textarea {
+            width: 100%;
+            height: 120px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            resize: vertical;
+            font-family: inherit;
+        }
+        .custom-prompt-area textarea:focus {
+            outline: none;
+            border-color: #6c63ff;
+        }
+        .custom-prompt-area label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        /* Passages */
+        .passages-section { margin-bottom: 20px; }
+        .passages-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .passages-header h2 {
+            font-size: 1.1rem;
+            color: #555;
+        }
+        .add-btn {
+            padding: 8px 16px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .add-btn:hover { background: #218838; }
+        .passage-card {
+            background: white;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            position: relative;
+        }
+        .passage-card .label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #6c63ff;
+            margin-bottom: 8px;
+        }
+        .passage-card textarea {
+            width: 100%;
+            height: 140px;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            resize: vertical;
+            font-family: inherit;
+            line-height: 1.6;
+        }
+        .passage-card textarea:focus {
+            outline: none;
+            border-color: #6c63ff;
+        }
+        .remove-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .remove-btn:hover { background: #e84141; }
+
+        /* Submit */
+        .submit-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: #6c63ff;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .submit-btn:hover { background: #5a52d5; }
+        .submit-btn:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1rem;
+        }
+        .loading.visible { display: block; }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e0e0e0;
+            border-top-color: #6c63ff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Results */
+        .results-section { margin-top: 32px; }
+        .results-section h2 {
+            font-size: 1.2rem;
+            color: #1a1a2e;
+            margin-bottom: 16px;
+        }
+        .result-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .result-card .result-header {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #6c63ff;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .result-card .passage-preview {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 12px;
+            font-style: italic;
+        }
+        .result-card .result-content {
+            font-size: 0.92rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        /* Copy button */
+        .copy-btn {
+            float: right;
+            padding: 4px 12px;
+            background: #eee;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: #555;
+        }
+        .copy-btn:hover { background: #ddd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>영어 지문 처리기</h1>
+
+        <!-- Mode Selection -->
+        <div class="mode-selector">
+            <button class="mode-btn active" data-mode="translate" onclick="selectMode(this)">
+                번역 + 분석
+                <div class="desc">번역, 어휘, 문법, 구문 분석</div>
+            </button>
+            <button class="mode-btn" data-mode="quiz" onclick="selectMode(this)">
+                문제 생성
+                <div class="desc">어휘, 내용, 추론, 어법 문제</div>
+            </button>
+            <button class="mode-btn" data-mode="custom" onclick="selectMode(this)">
+                커스텀
+                <div class="desc">직접 프롬프트 작성</div>
+            </button>
+        </div>
+
+        <!-- Custom Prompt -->
+        <div class="custom-prompt-area" id="customPromptArea">
+            <label>커스텀 프롬프트</label>
+            <textarea id="customPrompt" placeholder="영어 지문에 적용할 프롬프트를 입력하세요.&#10;예: 이 지문의 주제를 한 문장으로 요약하고, 글의 논리 구조를 분석해주세요."></textarea>
+        </div>
+
+        <!-- Passages Input -->
+        <div class="passages-section">
+            <div class="passages-header">
+                <h2>영어 지문 입력</h2>
+                <button class="add-btn" onclick="addPassage()">+ 지문 추가</button>
+            </div>
+            <div id="passagesList">
+                <div class="passage-card">
+                    <div class="label">지문 1</div>
+                    <button class="remove-btn" onclick="removePassage(this)" title="삭제">&times;</button>
+                    <textarea placeholder="영어 지문을 붙여넣으세요..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <button class="submit-btn" id="submitBtn" onclick="processPassages()">처리 시작</button>
+
+        <!-- Loading -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Claude가 지문을 분석 중입니다...</p>
+        </div>
+
+        <!-- Results -->
+        <div class="results-section" id="resultsSection" style="display:none;">
+            <h2>처리 결과</h2>
+            <div id="resultsList"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'translate';
+
+        function selectMode(btn) {
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentMode = btn.dataset.mode;
+            const customArea = document.getElementById('customPromptArea');
+            customArea.classList.toggle('visible', currentMode === 'custom');
+        }
+
+        function addPassage() {
+            const list = document.getElementById('passagesList');
+            const count = list.children.length + 1;
+            const card = document.createElement('div');
+            card.className = 'passage-card';
+            card.innerHTML = `
+                <div class="label">지문 ${count}</div>
+                <button class="remove-btn" onclick="removePassage(this)" title="삭제">&times;</button>
+                <textarea placeholder="영어 지문을 붙여넣으세요..."></textarea>
+            `;
+            list.appendChild(card);
+            updateLabels();
+        }
+
+        function removePassage(btn) {
+            const list = document.getElementById('passagesList');
+            if (list.children.length <= 1) {
+                alert('최소 1개의 지문이 필요합니다.');
+                return;
+            }
+            btn.parentElement.remove();
+            updateLabels();
+        }
+
+        function updateLabels() {
+            const cards = document.querySelectorAll('#passagesList .passage-card');
+            cards.forEach((card, i) => {
+                card.querySelector('.label').textContent = `지문 ${i + 1}`;
+            });
+        }
+
+        async function processPassages() {
+            const textareas = document.querySelectorAll('#passagesList textarea');
+            const passages = Array.from(textareas).map(t => t.value.trim()).filter(t => t);
+
+            if (passages.length === 0) {
+                alert('최소 1개의 지문을 입력해주세요.');
+                return;
+            }
+
+            const customPrompt = document.getElementById('customPrompt').value;
+            if (currentMode === 'custom' && !customPrompt.trim()) {
+                alert('커스텀 프롬프트를 입력해주세요.');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const resultsSection = document.getElementById('resultsSection');
+
+            submitBtn.disabled = true;
+            loading.classList.add('visible');
+            resultsSection.style.display = 'none';
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        passages,
+                        mode: currentMode,
+                        customPrompt,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                displayResults(data.results);
+            } catch (err) {
+                alert('서버 오류가 발생했습니다: ' + err.message);
+            } finally {
+                submitBtn.disabled = false;
+                loading.classList.remove('visible');
+            }
+        }
+
+        function displayResults(results) {
+            const section = document.getElementById('resultsSection');
+            const list = document.getElementById('resultsList');
+            list.innerHTML = '';
+
+            results.forEach(r => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+                card.innerHTML = `
+                    <div class="result-header">
+                        지문 ${r.index} 결과
+                        <button class="copy-btn" onclick="copyResult(this)">복사</button>
+                    </div>
+                    <div class="passage-preview">${escapeHtml(r.passage)}</div>
+                    <div class="result-content">${escapeHtml(r.result)}</div>
+                `;
+                list.appendChild(card);
+            });
+
+            section.style.display = 'block';
+            section.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function copyResult(btn) {
+            const content = btn.closest('.result-card').querySelector('.result-content').textContent;
+            navigator.clipboard.writeText(content).then(() => {
+                btn.textContent = '복사됨!';
+                setTimeout(() => btn.textContent = '복사', 1500);
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
