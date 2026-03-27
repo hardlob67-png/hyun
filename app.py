@@ -1,7 +1,9 @@
 import os
+import io
 from flask import Flask, render_template, request, jsonify
 from anthropic import Anthropic
 from dotenv import load_dotenv
+import openpyxl
 
 load_dotenv()
 
@@ -29,12 +31,16 @@ PROMPTS = {
 
 (모든 문장에 대해 반복)
 
-### 2. 핵심 어휘 및 표현
-각 문장에서 중요한 단어/표현을 3개 이내로 선별하여 아래 정보를 제공하세요:
-- 단어/표현
-- 한글 뜻
-- 동의어 또는 파생어 (있는 경우)
-- 바꿔 쓸 수 있는 표현 2~3개 (있는 경우)""",
+## 출력 순서 (각 문장마다 반복)
+영어 문장
+한글 번역
+→ 핵심 어휘: 단어/표현 (한글 뜻) | 동의어/파생어: ... | 바꿔쓰기: ...
+
+(다음 문장도 같은 형식으로 반복)
+
+### 핵심 어휘 규칙
+- 각 문장에서 중요한 단어/표현을 3개 이내로 선별
+- 각 단어마다: 한글 뜻, 동의어 또는 파생어(있는 경우), 바꿔 쓸 수 있는 표현 2~3개(있는 경우)""",
 
     "quiz": """당신은 영어 시험 출제 전문가입니다. 아래 영어 지문을 바탕으로 다음 유형의 문제를 만드세요:
 
@@ -101,6 +107,28 @@ def process():
             })
 
     return jsonify({"results": results})
+
+
+@app.route("/upload-excel", methods=["POST"])
+def upload_excel():
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"error": "파일을 선택해주세요."}), 400
+
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(file.read()))
+        ws = wb.active
+        passages = []
+        translations = []
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            eng = str(row[0]).strip() if row[0] else ""
+            kor = str(row[1]).strip() if len(row) > 1 and row[1] else ""
+            if eng:
+                passages.append(eng)
+                translations.append(kor)
+        return jsonify({"passages": passages, "translations": translations})
+    except Exception as e:
+        return jsonify({"error": f"엑셀 파일 읽기 오류: {str(e)}"}), 400
 
 
 if __name__ == "__main__":

@@ -273,6 +273,16 @@
             <textarea id="customPrompt" placeholder="영어 지문에 적용할 프롬프트를 입력하세요.&#10;예: 이 지문의 주제를 한 문장으로 요약하고, 글의 논리 구조를 분석해주세요."></textarea>
         </div>
 
+        <!-- Excel Upload -->
+        <div class="excel-upload" style="margin-bottom:20px;">
+            <label style="display:block;font-weight:600;color:#555;margin-bottom:8px;">엑셀 파일로 일괄 업로드</label>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <input type="file" id="excelFile" accept=".xlsx,.xls" style="font-size:0.9rem;">
+                <button class="add-btn" onclick="uploadExcel()">업로드</button>
+            </div>
+            <p style="font-size:0.75rem;color:#888;margin-top:6px;">A열: 영어 지문 / B열: 한글 번역(선택) / 1행은 헤더(무시됨)</p>
+        </div>
+
         <!-- Passages Input -->
         <div class="passages-section">
             <div class="passages-header">
@@ -316,6 +326,39 @@
             document.querySelectorAll('.kor-input').forEach(el => {
                 el.style.display = currentMode === 'translate' ? 'block' : 'none';
             });
+        }
+
+        async function uploadExcel() {
+            const fileInput = document.getElementById('excelFile');
+            if (!fileInput.files.length) {
+                alert('엑셀 파일을 선택해주세요.');
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            try {
+                const res = await fetch('/upload-excel', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.error) { alert(data.error); return; }
+                const list = document.getElementById('passagesList');
+                list.innerHTML = '';
+                const showKor = currentMode === 'translate' ? 'block' : 'none';
+                data.passages.forEach((eng, idx) => {
+                    const kor = data.translations[idx] || '';
+                    const card = document.createElement('div');
+                    card.className = 'passage-card';
+                    card.innerHTML = `
+                        <div class="label">지문 ${idx + 1}</div>
+                        <button class="remove-btn" onclick="removePassage(this)" title="삭제">&times;</button>
+                        <textarea class="eng-input" placeholder="영어 지문을 붙여넣으세요...">${escapeHtml(eng)}</textarea>
+                        <textarea class="kor-input" placeholder="(선택) 한글 번역..." style="display:${showKor};">${escapeHtml(kor)}</textarea>
+                    `;
+                    list.appendChild(card);
+                });
+                alert(`${data.passages.length}개 지문이 업로드되었습니다.`);
+            } catch (err) {
+                alert('업로드 오류: ' + err.message);
+            }
         }
 
         function addPassage() {
