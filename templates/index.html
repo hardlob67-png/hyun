@@ -154,6 +154,10 @@
             justify-content: center;
         }
         .remove-btn:hover { background: #e84141; }
+        .kor-input {
+            margin-top: 8px;
+            background: #f9f9ff;
+        }
 
         /* Submit */
         .submit-btn {
@@ -279,7 +283,8 @@
                 <div class="passage-card">
                     <div class="label">지문 1</div>
                     <button class="remove-btn" onclick="removePassage(this)" title="삭제">&times;</button>
-                    <textarea placeholder="영어 지문을 붙여넣으세요..."></textarea>
+                    <textarea class="eng-input" placeholder="영어 지문을 붙여넣으세요..."></textarea>
+                    <textarea class="kor-input" placeholder="(선택) 한글 번역을 붙여넣으세요... 비워두면 자동 번역됩니다." style="display:none;"></textarea>
                 </div>
             </div>
         </div>
@@ -308,6 +313,9 @@
             currentMode = btn.dataset.mode;
             const customArea = document.getElementById('customPromptArea');
             customArea.classList.toggle('visible', currentMode === 'custom');
+            document.querySelectorAll('.kor-input').forEach(el => {
+                el.style.display = currentMode === 'translate' ? 'block' : 'none';
+            });
         }
 
         function addPassage() {
@@ -315,10 +323,12 @@
             const count = list.children.length + 1;
             const card = document.createElement('div');
             card.className = 'passage-card';
+            const showKor = currentMode === 'translate' ? 'block' : 'none';
             card.innerHTML = `
                 <div class="label">지문 ${count}</div>
                 <button class="remove-btn" onclick="removePassage(this)" title="삭제">&times;</button>
-                <textarea placeholder="영어 지문을 붙여넣으세요..."></textarea>
+                <textarea class="eng-input" placeholder="영어 지문을 붙여넣으세요..."></textarea>
+                <textarea class="kor-input" placeholder="(선택) 한글 번역을 붙여넣으세요... 비워두면 자동 번역됩니다." style="display:${showKor};"></textarea>
             `;
             list.appendChild(card);
             updateLabels();
@@ -342,8 +352,17 @@
         }
 
         async function processPassages() {
-            const textareas = document.querySelectorAll('#passagesList textarea');
-            const passages = Array.from(textareas).map(t => t.value.trim()).filter(t => t);
+            const cards = document.querySelectorAll('#passagesList .passage-card');
+            const passages = [];
+            const translations = [];
+            cards.forEach(card => {
+                const eng = card.querySelector('.eng-input').value.trim();
+                const kor = card.querySelector('.kor-input');
+                if (eng) {
+                    passages.push(eng);
+                    translations.push(kor ? kor.value.trim() : '');
+                }
+            });
 
             if (passages.length === 0) {
                 alert('최소 1개의 지문을 입력해주세요.');
@@ -370,6 +389,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         passages,
+                        translations,
                         mode: currentMode,
                         customPrompt,
                     }),

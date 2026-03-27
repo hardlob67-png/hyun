@@ -9,14 +9,32 @@ app = Flask(__name__)
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 PROMPTS = {
-    "translate": """당신은 영어 교육 전문가입니다. 아래 영어 지문에 대해 다음 작업을 수행하세요:
+    "translate": """당신은 영어 교육 전문가입니다. 아래 작업을 수행하세요:
 
-1. **한국어 번역**: 자연스러운 한국어로 번역
-2. **핵심 어휘**: 중요 단어/숙어 10개를 선별하여 뜻과 예문 제공
-3. **문법 분석**: 주요 문법 포인트 3-5개 설명
-4. **구문 분석**: 복잡한 문장 구조 해설
+## 규칙
+- 사용자가 영어와 한글 번역을 함께 제공한 경우: 제공된 영어와 한글을 절대 변형하지 말고 그대로 사용하세요.
+- 사용자가 영어만 제공한 경우: 직접 자연스러운 한국어로 번역하세요.
 
-각 섹션을 명확히 구분하여 작성하세요.""",
+## 출력 형식
+
+### 1. 문장별 영한 대조
+영어 지문을 한 문장씩 나누고, 각 영어 문장 바로 아래에 한글 번역을 배치하세요.
+
+형식:
+영어 문장 1
+한글 번역 1
+
+영어 문장 2
+한글 번역 2
+
+(모든 문장에 대해 반복)
+
+### 2. 핵심 어휘 및 표현
+각 문장에서 중요한 단어/표현을 3개 이내로 선별하여 아래 정보를 제공하세요:
+- 단어/표현
+- 한글 뜻
+- 동의어 또는 파생어 (있는 경우)
+- 바꿔 쓸 수 있는 표현 2~3개 (있는 경우)""",
 
     "quiz": """당신은 영어 시험 출제 전문가입니다. 아래 영어 지문을 바탕으로 다음 유형의 문제를 만드세요:
 
@@ -39,6 +57,7 @@ def index():
 def process():
     data = request.get_json()
     passages = data.get("passages", [])
+    translations = data.get("translations", [])
     mode = data.get("mode", "translate")
     custom_prompt = data.get("customPrompt", "")
 
@@ -53,13 +72,20 @@ def process():
     for i, passage in enumerate(passages):
         if not passage.strip():
             continue
+
+        korean = translations[i] if i < len(translations) else ""
+        if mode == "translate" and korean:
+            user_content = f"[지문 {i + 1}]\n\n[영어]\n{passage}\n\n[한글 번역]\n{korean}"
+        else:
+            user_content = f"[지문 {i + 1}]\n\n{passage}"
+
         try:
             message = client.messages.create(
                 model="claude-sonnet-4-20250514",
                 max_tokens=4096,
                 system=system_prompt,
                 messages=[
-                    {"role": "user", "content": f"[지문 {i + 1}]\n\n{passage}"}
+                    {"role": "user", "content": user_content}
                 ],
             )
             results.append({
