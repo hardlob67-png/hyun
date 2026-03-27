@@ -84,6 +84,44 @@
             color: #555;
         }
 
+        /* Saved Prompts */
+        .prompt-toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .prompt-toolbar select {
+            flex: 1;
+            min-width: 160px;
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-family: inherit;
+            background: white;
+        }
+        .prompt-toolbar select:focus {
+            outline: none;
+            border-color: #6c63ff;
+        }
+        .prompt-toolbar button {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .prompt-save-btn { background: #6c63ff; color: white; }
+        .prompt-save-btn:hover { background: #5a52d5; }
+        .prompt-load-btn { background: #28a745; color: white; }
+        .prompt-load-btn:hover { background: #218838; }
+        .prompt-delete-btn { background: #ff4757; color: white; }
+        .prompt-delete-btn:hover { background: #e84141; }
+
         /* Passages */
         .passages-section { margin-bottom: 20px; }
         .passages-header {
@@ -270,7 +308,18 @@
         <!-- Custom Prompt -->
         <div class="custom-prompt-area" id="customPromptArea">
             <label>커스텀 프롬프트</label>
+            <div class="prompt-toolbar">
+                <select id="savedPromptSelect">
+                    <option value="">-- 저장된 프롬프트 선택 --</option>
+                </select>
+                <button class="prompt-toolbar button prompt-load-btn" onclick="loadPrompt()">불러오기</button>
+                <button class="prompt-toolbar button prompt-delete-btn" onclick="deletePrompt()">삭제</button>
+            </div>
             <textarea id="customPrompt" placeholder="영어 지문에 적용할 프롬프트를 입력하세요.&#10;예: 이 지문의 주제를 한 문장으로 요약하고, 글의 논리 구조를 분석해주세요."></textarea>
+            <div class="prompt-toolbar" style="margin-top:8px;margin-bottom:0;">
+                <input type="text" id="promptName" placeholder="프롬프트 이름을 입력하세요" style="flex:1;min-width:160px;padding:8px 12px;border:2px solid #ddd;border-radius:8px;font-size:0.85rem;font-family:inherit;">
+                <button class="prompt-toolbar button prompt-save-btn" onclick="savePrompt()">저장</button>
+            </div>
         </div>
 
         <!-- Excel Upload -->
@@ -490,6 +539,64 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // --- 프롬프트 저장/불러오기 ---
+        function getSavedPrompts() {
+            try {
+                return JSON.parse(localStorage.getItem('savedPrompts') || '{}');
+            } catch { return {}; }
+        }
+
+        function refreshPromptSelect() {
+            const select = document.getElementById('savedPromptSelect');
+            const prompts = getSavedPrompts();
+            const names = Object.keys(prompts).sort();
+            select.innerHTML = '<option value="">-- 저장된 프롬프트 선택 --</option>';
+            names.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                select.appendChild(opt);
+            });
+        }
+
+        function savePrompt() {
+            const name = document.getElementById('promptName').value.trim();
+            const content = document.getElementById('customPrompt').value.trim();
+            if (!name) { alert('프롬프트 이름을 입력해주세요.'); return; }
+            if (!content) { alert('프롬프트 내용을 입력해주세요.'); return; }
+            const prompts = getSavedPrompts();
+            if (prompts[name] && !confirm(`"${name}" 프롬프트가 이미 있습니다. 덮어쓸까요?`)) return;
+            prompts[name] = content;
+            localStorage.setItem('savedPrompts', JSON.stringify(prompts));
+            document.getElementById('promptName').value = '';
+            refreshPromptSelect();
+            document.getElementById('savedPromptSelect').value = name;
+            alert(`"${name}" 프롬프트가 저장되었습니다.`);
+        }
+
+        function loadPrompt() {
+            const select = document.getElementById('savedPromptSelect');
+            const name = select.value;
+            if (!name) { alert('불러올 프롬프트를 선택해주세요.'); return; }
+            const prompts = getSavedPrompts();
+            document.getElementById('customPrompt').value = prompts[name] || '';
+        }
+
+        function deletePrompt() {
+            const select = document.getElementById('savedPromptSelect');
+            const name = select.value;
+            if (!name) { alert('삭제할 프롬프트를 선택해주세요.'); return; }
+            if (!confirm(`"${name}" 프롬프트를 삭제할까요?`)) return;
+            const prompts = getSavedPrompts();
+            delete prompts[name];
+            localStorage.setItem('savedPrompts', JSON.stringify(prompts));
+            refreshPromptSelect();
+            alert(`"${name}" 프롬프트가 삭제되었습니다.`);
+        }
+
+        // 페이지 로드 시 저장된 프롬프트 목록 초기화
+        refreshPromptSelect();
     </script>
 </body>
 </html>
