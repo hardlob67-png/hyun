@@ -1,5 +1,6 @@
 import os
 import io
+from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 from anthropic import Anthropic
 from dotenv import load_dotenv
@@ -9,6 +10,9 @@ load_dotenv()
 
 app = Flask(__name__)
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+os.makedirs(RESULTS_DIR, exist_ok=True)
 
 PROMPTS = {
     "translate": """당신은 영어 교육 전문가입니다. 아래 작업을 수행하세요:
@@ -108,7 +112,68 @@ def process():
                 "result": f"오류 발생: {str(e)}",
             })
 
+    # 자동 저장
+    if results:
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        mode_name = {"translate": "번역분석", "quiz": "문제생성", "custom": "커스텀"}.get(mode, mode)
+        filename = f"{timestamp}_{mode_name}.txt"
+        filepath = os.path.join(RESULTS_DIR, filename)
+        with open(filepath, "w", encoding="utf-8") as f:
+            for r in results:
+                f.write(f"{'='*60}\n")
+                f.write(f"[{r['index']}번]\n")
+                f.write(f"{'='*60}\n\n")
+                f.write(r["result"])
+                f.write("\n\n")
+
     return jsonify({"results": results})
+
+
+@app.route("/review", methods=["POST"])
+def review():
+    data = request.get_json()
+    passage = data.get("passage", "")
+    translation = data.get("translation", "")
+    analysis = data.get("analysis", "")
+    label = data.get("label", "")
+
+    if not passage or not analysis:
+        return jsonify({"error": "검토할 데이터가 없습니다."}), 400
+
+    review_prompt = """당신은 대한민국 영어 교육 검토 전문가입니다. 아래 분석본을 검토해주세요.
+
+## 검토 항목
+
+### 1. 원문 변형 여부
+- 분석본에 인용된 영어 문장이 원문과 정확히 일치하는지 확인
+- 한글 번역이 제공된 경우, 번역이 원본과 일치하는지 확인
+- 변형된 부분이 있으면 구체적으로 지적
+
+### 2. 어휘 난이도 검토
+- 분석본에서 제시한 핵심 어휘, 동의어, 바꿔쓰기 표현의 난이도를 평가
+- 각 단어/표현의 빈도 수준을 표시 (상: 수능 필수, 중: 수능 출제 가능, 하: 수능 범위 초과)
+- 수능 영어 시험 수준(EBS 연계, 고등학교 교과서 기준)에 적합한지 판단
+- 너무 어려운 단어가 있으면 수능 수준의 대체 표현 제안
+
+### 3. 종합 평가
+- 전체적인 분석 품질 한줄 평가
+- 수정이 필요한 부분 요약"""
+
+    user_content = f"[{label}번 지문]\n\n[원문 영어]\n{passage}\n"
+    if translation:
+        user_content += f"\n[원문 한글 번역]\n{translation}\n"
+    user_content += f"\n[분석본]\n{analysis}"
+
+    try:
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=4096,
+            system=review_prompt,
+            messages=[{"role": "user", "content": user_content}],
+        )
+        return jsonify({"review": message.content[0].text})
+    except Exception as e:
+        return jsonify({"error": f"검토 오류: {str(e)}"}), 500
 
 
 @app.route("/upload-excel", methods=["POST"])

@@ -275,18 +275,53 @@
             white-space: pre-wrap;
         }
 
-        /* Copy button */
-        .copy-btn {
+        /* Copy & action buttons */
+        .result-actions {
             float: right;
+            display: flex;
+            gap: 4px;
+        }
+        .copy-btn, .review-btn, .download-all-btn {
             padding: 4px 12px;
-            background: #eee;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.8rem;
-            color: #555;
+            font-weight: 600;
         }
+        .copy-btn { background: #eee; color: #555; }
         .copy-btn:hover { background: #ddd; }
+        .review-btn { background: #ff9f43; color: white; }
+        .review-btn:hover { background: #e88e2e; }
+        .download-all-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 16px;
+            background: #17a2b8;
+            color: white;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+        .download-all-btn:hover { background: #138496; }
+
+        /* Review result */
+        .review-content {
+            margin-top: 12px;
+            padding: 14px;
+            background: #fff8e1;
+            border: 1px solid #ffe082;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+        .review-loading {
+            margin-top: 10px;
+            color: #888;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -371,6 +406,8 @@
         <!-- Results -->
         <div class="results-section" id="resultsSection" style="display:none;">
             <h2>처리 결과</h2>
+            <p id="autoSaveMsg" style="font-size:0.8rem;color:#28a745;margin-bottom:12px;"></p>
+            <button class="download-all-btn" onclick="downloadAllResults()">전체 결과 TXT 다운로드</button>
             <div id="resultsList"></div>
         </div>
     </div>
@@ -378,6 +415,7 @@
     <script>
         let currentMode = 'translate';
         let parsedData = []; // { number, eng, kor }
+        let lastResults = []; // 마지막 처리 결과 저장
 
         function selectMode(btn) {
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -531,7 +569,10 @@
                 });
                 const data = await response.json();
                 if (data.error) { alert(data.error); return; }
+                lastResults = data.results;
                 displayResults(data.results);
+                document.getElementById('autoSaveMsg').textContent =
+                    '결과가 프로그램 폴더의 results 폴더에 자동 저장되었습니다.';
             } catch (err) {
                 alert('서버 오류가 발생했습니다: ' + err.message);
             } finally {
@@ -545,13 +586,17 @@
             const list = document.getElementById('resultsList');
             list.innerHTML = '';
 
-            results.forEach(r => {
+            results.forEach((r, idx) => {
                 const card = document.createElement('div');
                 card.className = 'result-card';
+                card.dataset.idx = idx;
                 card.innerHTML = `
                     <div class="result-header">
                         ${escapeHtml(String(r.index))}번 결과
-                        <button class="copy-btn" onclick="copyResult(this)">복사</button>
+                        <div class="result-actions">
+                            <button class="review-btn" onclick="reviewResult(${idx})">검토</button>
+                            <button class="copy-btn" onclick="copyResult(this)">복사</button>
+                        </div>
                     </div>
                     <div class="passage-preview">${escapeHtml(r.passage)}</div>
                     <div class="result-content">${escapeHtml(r.result)}</div>
@@ -569,6 +614,73 @@
                 btn.textContent = '복사됨!';
                 setTimeout(() => btn.textContent = '복사', 1500);
             });
+        }
+
+        // --- TXT 다운로드 ---
+        function downloadAllResults() {
+            if (!lastResults.length) { alert('다운로드할 결과가 없습니다.'); return; }
+            let text = '';
+            lastResults.forEach(r => {
+                text += '='.repeat(60) + '\n';
+                text += `[${r.index}번]\n`;
+                text += '='.repeat(60) + '\n\n';
+                text += r.result + '\n\n';
+            });
+            const now = new Date();
+            const ts = now.getFullYear() + '-'
+                + String(now.getMonth()+1).padStart(2,'0') + '-'
+                + String(now.getDate()).padStart(2,'0') + '_'
+                + String(now.getHours()).padStart(2,'0') + '-'
+                + String(now.getMinutes()).padStart(2,'0') + '-'
+                + String(now.getSeconds()).padStart(2,'0');
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `결과_${ts}.txt`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        // --- 검토 ---
+        async function reviewResult(idx) {
+            const r = lastResults[idx];
+            const card = document.querySelectorAll('.result-card')[idx];
+
+            // 이미 검토 결과가 있으면 제거 (토글)
+            const existing = card.querySelector('.review-content');
+            if (existing) { existing.remove(); return; }
+
+            // 원문 데이터 찾기
+            const parsed = parsedData[idx] || {};
+
+            const loadingEl = document.createElement('div');
+            loadingEl.className = 'review-loading';
+            loadingEl.textContent = '검토 중...';
+            card.appendChild(loadingEl);
+
+            try {
+                const response = await fetch('/review', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        passage: parsed.eng || '',
+                        translation: parsed.kor || '',
+                        analysis: r.result,
+                        label: String(r.index),
+                    }),
+                });
+                const data = await response.json();
+                loadingEl.remove();
+                if (data.error) { alert(data.error); return; }
+
+                const reviewEl = document.createElement('div');
+                reviewEl.className = 'review-content';
+                reviewEl.textContent = data.review;
+                card.appendChild(reviewEl);
+            } catch (err) {
+                loadingEl.remove();
+                alert('검토 오류: ' + err.message);
+            }
         }
 
         function escapeHtml(text) {
