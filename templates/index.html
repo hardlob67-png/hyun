@@ -599,7 +599,7 @@
                         </div>
                     </div>
                     <div class="passage-preview">${escapeHtml(r.passage)}</div>
-                    <div class="result-content">${escapeHtml(r.result)}</div>
+                    <div class="result-content">${escapeHtml(stripMarkdown(r.result))}</div>
                 `;
                 list.appendChild(card);
             });
@@ -624,7 +624,7 @@
                 text += '='.repeat(60) + '\n';
                 text += `[${r.index}번]\n`;
                 text += '='.repeat(60) + '\n\n';
-                text += r.result + '\n\n';
+                text += stripMarkdown(r.result) + '\n\n';
             });
             const now = new Date();
             const ts = now.getFullYear() + '-'
@@ -675,7 +675,7 @@
 
                 const reviewEl = document.createElement('div');
                 reviewEl.className = 'review-content';
-                reviewEl.textContent = data.review;
+                reviewEl.textContent = stripMarkdown(data.review);
                 card.appendChild(reviewEl);
             } catch (err) {
                 loadingEl.remove();
@@ -687,6 +687,18 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function stripMarkdown(text) {
+            return text
+                .replace(/^#{1,6}\s+/gm, '')       // ## 제목
+                .replace(/\*\*(.+?)\*\*/g, '$1')    // **굵게**
+                .replace(/\*(.+?)\*/g, '$1')        // *기울임*
+                .replace(/__(.+?)__/g, '$1')        // __굵게__
+                .replace(/_(.+?)_/g, '$1')          // _기울임_
+                .replace(/```[\s\S]*?```/g, m =>    // ```코드블록```
+                    m.replace(/```\w*\n?/g, '').replace(/```/g, ''))
+                .replace(/`(.+?)`/g, '$1');         // `인라인코드`
         }
 
         // --- 프롬프트 저장/불러오기 ---
