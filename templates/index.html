@@ -122,79 +122,83 @@
         .prompt-delete-btn { background: #ff4757; color: white; }
         .prompt-delete-btn:hover { background: #e84141; }
 
-        /* Passages */
-        .passages-section { margin-bottom: 20px; }
-        .passages-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .passages-header h2 {
+        /* Bulk Input */
+        .bulk-section { margin-bottom: 20px; }
+        .bulk-section h2 {
             font-size: 1.1rem;
             color: #555;
-        }
-        .add-btn {
-            padding: 8px 16px;
-            background: #28a745;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-        .add-btn:hover { background: #218838; }
-        .passage-card {
-            background: white;
-            border-radius: 10px;
-            padding: 16px;
             margin-bottom: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            position: relative;
         }
-        .passage-card .label {
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: #6c63ff;
-            margin-bottom: 8px;
-        }
-        .passage-card textarea {
+        .bulk-section textarea {
             width: 100%;
-            height: 140px;
-            padding: 10px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
+            height: 300px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
             font-size: 0.9rem;
             resize: vertical;
             font-family: inherit;
             line-height: 1.6;
         }
-        .passage-card textarea:focus {
+        .bulk-section textarea:focus {
             outline: none;
             border-color: #6c63ff;
         }
-        .remove-btn {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            background: #ff4757;
+        .bulk-section .hint {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 6px;
+            line-height: 1.5;
+        }
+        .parse-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: 12px;
+            background: #28a745;
             color: white;
             border: none;
-            border-radius: 6px;
-            width: 28px;
-            height: 28px;
-            cursor: pointer;
+            border-radius: 10px;
             font-size: 1rem;
-            line-height: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            font-weight: 700;
+            cursor: pointer;
         }
-        .remove-btn:hover { background: #e84141; }
-        .kor-input {
-            margin-top: 8px;
+        .parse-btn:hover { background: #218838; }
+
+        /* Parsed Preview */
+        .parsed-section { margin-bottom: 20px; }
+        .parsed-section h2 {
+            font-size: 1.1rem;
+            color: #555;
+            margin-bottom: 12px;
+        }
+        .parsed-card {
+            background: white;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .parsed-card .parsed-label {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #6c63ff;
+            margin-bottom: 8px;
+        }
+        .parsed-card .parsed-eng {
+            font-size: 0.88rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            margin-bottom: 6px;
+        }
+        .parsed-card .parsed-kor {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            color: #555;
             background: #f9f9ff;
+            padding: 8px 10px;
+            border-radius: 6px;
         }
 
         /* Submit */
@@ -322,30 +326,38 @@
             </div>
         </div>
 
+        <!-- Bulk Input -->
+        <div class="bulk-section">
+            <h2>지문 통합 입력</h2>
+            <textarea id="bulkInput" placeholder="문제 번호가 포함된 영어 지문과 해석을 통째로 붙여넣으세요.
+
+예시:
+18. The importance of sleep cannot be overstated.
+수면의 중요성은 아무리 강조해도 지나치지 않다.
+
+19. Climate change is one of the most pressing issues facing humanity today.
+기후 변화는 오늘날 인류가 직면한 가장 시급한 문제 중 하나이다.
+
+20) In recent years, artificial intelligence has transformed...
+최근 몇 년 동안 인공지능은..."></textarea>
+            <p class="hint">문제 번호 형식: "18." "18)" "18번" "[18]" 등 자동 인식 / 영어 뒤에 한글 해석이 있으면 자동 분리됩니다.</p>
+            <button class="parse-btn" onclick="parsePassages()">자동 분류</button>
+        </div>
+
         <!-- Excel Upload -->
         <div class="excel-upload" style="margin-bottom:20px;">
-            <label style="display:block;font-weight:600;color:#555;margin-bottom:8px;">엑셀 파일로 일괄 업로드</label>
+            <label style="display:block;font-weight:600;color:#555;margin-bottom:8px;">또는 엑셀 파일로 업로드</label>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                 <input type="file" id="excelFile" accept=".xlsx,.xls" style="font-size:0.9rem;">
-                <button class="add-btn" onclick="uploadExcel()">업로드</button>
+                <button class="parse-btn" style="width:auto;padding:8px 16px;font-size:0.85rem;margin-top:0;" onclick="uploadExcel()">업로드</button>
             </div>
             <p style="font-size:0.75rem;color:#888;margin-top:6px;">A열: 영어 지문 / B열: 한글 번역(선택) / 1행은 헤더(무시됨)</p>
         </div>
 
-        <!-- Passages Input -->
-        <div class="passages-section">
-            <div class="passages-header">
-                <h2>영어 지문 입력</h2>
-                <button class="add-btn" onclick="addPassage()">+ 지문 추가</button>
-            </div>
-            <div id="passagesList">
-                <div class="passage-card">
-                    <div class="label">지문 1</div>
-                    <button class="remove-btn" onclick="removePassage(this)" title="삭제">&times;</button>
-                    <textarea class="eng-input" placeholder="영어 지문을 붙여넣으세요..."></textarea>
-                    <textarea class="kor-input" placeholder="(선택) 한글 번역을 붙여넣으세요... 비워두면 자동 번역됩니다." style="display:none;"></textarea>
-                </div>
-            </div>
+        <!-- Parsed Preview -->
+        <div class="parsed-section" id="parsedSection" style="display:none;">
+            <h2>분류 결과 (<span id="parsedCount">0</span>개 지문)</h2>
+            <div id="parsedList"></div>
         </div>
 
         <button class="submit-btn" id="submitBtn" onclick="processPassages()">처리 시작</button>
@@ -365,99 +377,129 @@
 
     <script>
         let currentMode = 'translate';
+        let parsedData = []; // { number, eng, kor }
 
         function selectMode(btn) {
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentMode = btn.dataset.mode;
-            const customArea = document.getElementById('customPromptArea');
-            customArea.classList.toggle('visible', currentMode === 'custom');
-            document.querySelectorAll('.kor-input').forEach(el => {
-                el.style.display = currentMode === 'translate' ? 'block' : 'none';
-            });
+            document.getElementById('customPromptArea').classList.toggle('visible', currentMode === 'custom');
         }
 
-        async function uploadExcel() {
-            const fileInput = document.getElementById('excelFile');
-            if (!fileInput.files.length) {
-                alert('엑셀 파일을 선택해주세요.');
+        // --- 텍스트 자동 분류 ---
+        function isKoreanLine(line) {
+            const korean = (line.match(/[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F]/g) || []).length;
+            const english = (line.match(/[a-zA-Z]/g) || []).length;
+            return korean > 0 && korean >= english * 0.3;
+        }
+
+        function parsePassages() {
+            const text = document.getElementById('bulkInput').value.trim();
+            if (!text) { alert('지문을 입력해주세요.'); return; }
+
+            // 문제 번호 패턴: "18." "18)" "18번" "[18]" "(18)" 등 (줄 시작 또는 앞에 공백)
+            const numberPattern = /^[ \t]*(?:\[(\d+)\]|\((\d+)\)|(\d+)\s*[.)\-]|(\d+)\s*번)/m;
+
+            const lines = text.split('\n');
+            const chunks = [];
+            let current = null;
+
+            for (const line of lines) {
+                const match = line.match(numberPattern);
+                if (match) {
+                    if (current) chunks.push(current);
+                    const num = match[1] || match[2] || match[3] || match[4];
+                    // 번호 패턴 이후의 나머지 텍스트
+                    const rest = line.replace(numberPattern, '').trim();
+                    current = { number: num, lines: rest ? [rest] : [] };
+                } else if (current) {
+                    current.lines.push(line);
+                }
+            }
+            if (current) chunks.push(current);
+
+            if (chunks.length === 0) {
+                alert('문제 번호를 인식하지 못했습니다.\n"18." "18)" "18번" "[18]" 형식으로 번호를 붙여주세요.');
                 return;
             }
+
+            // 각 chunk에서 영어/한글 분리
+            parsedData = chunks.map(chunk => {
+                const engLines = [];
+                const korLines = [];
+                let hitKorean = false;
+
+                for (const line of chunk.lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed) {
+                        if (hitKorean) korLines.push('');
+                        else engLines.push('');
+                        continue;
+                    }
+                    if (!hitKorean && isKoreanLine(trimmed)) {
+                        hitKorean = true;
+                    }
+                    if (hitKorean) korLines.push(line);
+                    else engLines.push(line);
+                }
+
+                return {
+                    number: chunk.number,
+                    eng: engLines.join('\n').trim(),
+                    kor: korLines.join('\n').trim(),
+                };
+            }).filter(d => d.eng);
+
+            renderParsedPreview();
+        }
+
+        function renderParsedPreview() {
+            const section = document.getElementById('parsedSection');
+            const list = document.getElementById('parsedList');
+            document.getElementById('parsedCount').textContent = parsedData.length;
+            list.innerHTML = '';
+
+            parsedData.forEach((d, i) => {
+                const card = document.createElement('div');
+                card.className = 'parsed-card';
+                card.innerHTML = `
+                    <div class="parsed-label">${escapeHtml(d.number)}번</div>
+                    <div class="parsed-eng">${escapeHtml(d.eng)}</div>
+                    ${d.kor ? `<div class="parsed-kor">${escapeHtml(d.kor)}</div>` : ''}
+                `;
+                list.appendChild(card);
+            });
+
+            section.style.display = parsedData.length ? 'block' : 'none';
+            if (parsedData.length) section.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- 엑셀 업로드 ---
+        async function uploadExcel() {
+            const fileInput = document.getElementById('excelFile');
+            if (!fileInput.files.length) { alert('엑셀 파일을 선택해주세요.'); return; }
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
             try {
                 const res = await fetch('/upload-excel', { method: 'POST', body: formData });
                 const data = await res.json();
                 if (data.error) { alert(data.error); return; }
-                const list = document.getElementById('passagesList');
-                list.innerHTML = '';
-                const showKor = currentMode === 'translate' ? 'block' : 'none';
-                data.passages.forEach((eng, idx) => {
-                    const kor = data.translations[idx] || '';
-                    const card = document.createElement('div');
-                    card.className = 'passage-card';
-                    card.innerHTML = `
-                        <div class="label">지문 ${idx + 1}</div>
-                        <button class="remove-btn" onclick="removePassage(this)" title="삭제">&times;</button>
-                        <textarea class="eng-input" placeholder="영어 지문을 붙여넣으세요...">${escapeHtml(eng)}</textarea>
-                        <textarea class="kor-input" placeholder="(선택) 한글 번역..." style="display:${showKor};">${escapeHtml(kor)}</textarea>
-                    `;
-                    list.appendChild(card);
-                });
-                alert(`${data.passages.length}개 지문이 업로드되었습니다.`);
+                parsedData = data.passages.map((eng, idx) => ({
+                    number: String(idx + 1),
+                    eng: eng,
+                    kor: data.translations[idx] || '',
+                }));
+                renderParsedPreview();
+                alert(`${parsedData.length}개 지문이 업로드되었습니다.`);
             } catch (err) {
                 alert('업로드 오류: ' + err.message);
             }
         }
 
-        function addPassage() {
-            const list = document.getElementById('passagesList');
-            const count = list.children.length + 1;
-            const card = document.createElement('div');
-            card.className = 'passage-card';
-            const showKor = currentMode === 'translate' ? 'block' : 'none';
-            card.innerHTML = `
-                <div class="label">지문 ${count}</div>
-                <button class="remove-btn" onclick="removePassage(this)" title="삭제">&times;</button>
-                <textarea class="eng-input" placeholder="영어 지문을 붙여넣으세요..."></textarea>
-                <textarea class="kor-input" placeholder="(선택) 한글 번역을 붙여넣으세요... 비워두면 자동 번역됩니다." style="display:${showKor};"></textarea>
-            `;
-            list.appendChild(card);
-            updateLabels();
-        }
-
-        function removePassage(btn) {
-            const list = document.getElementById('passagesList');
-            if (list.children.length <= 1) {
-                alert('최소 1개의 지문이 필요합니다.');
-                return;
-            }
-            btn.parentElement.remove();
-            updateLabels();
-        }
-
-        function updateLabels() {
-            const cards = document.querySelectorAll('#passagesList .passage-card');
-            cards.forEach((card, i) => {
-                card.querySelector('.label').textContent = `지문 ${i + 1}`;
-            });
-        }
-
+        // --- 처리 시작 ---
         async function processPassages() {
-            const cards = document.querySelectorAll('#passagesList .passage-card');
-            const passages = [];
-            const translations = [];
-            cards.forEach(card => {
-                const eng = card.querySelector('.eng-input').value.trim();
-                const kor = card.querySelector('.kor-input');
-                if (eng) {
-                    passages.push(eng);
-                    translations.push(kor ? kor.value.trim() : '');
-                }
-            });
-
-            if (passages.length === 0) {
-                alert('최소 1개의 지문을 입력해주세요.');
+            if (parsedData.length === 0) {
+                alert('먼저 지문을 입력하고 "자동 분류" 버튼을 눌러주세요.');
                 return;
             }
 
@@ -480,20 +522,15 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        passages,
-                        translations,
+                        passages: parsedData.map(d => d.eng),
+                        translations: parsedData.map(d => d.kor),
+                        numbers: parsedData.map(d => d.number),
                         mode: currentMode,
                         customPrompt,
                     }),
                 });
-
                 const data = await response.json();
-
-                if (data.error) {
-                    alert(data.error);
-                    return;
-                }
-
+                if (data.error) { alert(data.error); return; }
                 displayResults(data.results);
             } catch (err) {
                 alert('서버 오류가 발생했습니다: ' + err.message);
@@ -513,7 +550,7 @@
                 card.className = 'result-card';
                 card.innerHTML = `
                     <div class="result-header">
-                        지문 ${r.index} 결과
+                        ${escapeHtml(String(r.index))}번 결과
                         <button class="copy-btn" onclick="copyResult(this)">복사</button>
                     </div>
                     <div class="passage-preview">${escapeHtml(r.passage)}</div>
@@ -595,7 +632,6 @@
             alert(`"${name}" 프롬프트가 삭제되었습니다.`);
         }
 
-        // 페이지 로드 시 저장된 프롬프트 목록 초기화
         refreshPromptSelect();
     </script>
 </body>

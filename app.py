@@ -64,6 +64,7 @@ def process():
     data = request.get_json()
     passages = data.get("passages", [])
     translations = data.get("translations", [])
+    numbers = data.get("numbers", [])
     mode = data.get("mode", "translate")
     custom_prompt = data.get("customPrompt", "")
 
@@ -79,11 +80,12 @@ def process():
         if not passage.strip():
             continue
 
+        label = numbers[i] if i < len(numbers) else str(i + 1)
         korean = translations[i] if i < len(translations) else ""
         if mode == "translate" and korean:
-            user_content = f"[지문 {i + 1}]\n\n[영어]\n{passage}\n\n[한글 번역]\n{korean}"
+            user_content = f"[{label}번 지문]\n\n[영어]\n{passage}\n\n[한글 번역]\n{korean}"
         else:
-            user_content = f"[지문 {i + 1}]\n\n{passage}"
+            user_content = f"[{label}번 지문]\n\n{passage}"
 
         try:
             message = client.messages.create(
@@ -95,13 +97,13 @@ def process():
                 ],
             )
             results.append({
-                "index": i + 1,
+                "index": label,
                 "passage": passage[:100] + "..." if len(passage) > 100 else passage,
                 "result": message.content[0].text,
             })
         except Exception as e:
             results.append({
-                "index": i + 1,
+                "index": label,
                 "passage": passage[:100] + "..." if len(passage) > 100 else passage,
                 "result": f"오류 발생: {str(e)}",
             })
