@@ -73,6 +73,13 @@ def process():
     numbers = data.get("numbers", [])
     mode = data.get("mode", "translate")
     custom_prompt = data.get("customPrompt", "")
+    model_choice = data.get("model", "sonnet")
+
+    MODELS = {
+        "sonnet": "claude-sonnet-4-20250514",
+        "opus": "claude-opus-4-20250514",
+    }
+    model_id = MODELS.get(model_choice, MODELS["sonnet"])
 
     if not passages:
         return jsonify({"error": "지문을 입력해주세요."}), 400
@@ -95,7 +102,7 @@ def process():
 
         try:
             message = client.messages.create(
-                model="claude-sonnet-4-20250514",
+                model=model_id,
                 max_tokens=4096,
                 system=system_prompt,
                 messages=[

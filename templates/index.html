@@ -344,6 +344,15 @@
             </button>
         </div>
 
+        <!-- Model Selection -->
+        <div style="margin-bottom:20px;display:flex;align-items:center;gap:10px;">
+            <label style="font-weight:600;color:#555;white-space:nowrap;">AI 모델:</label>
+            <select id="modelSelect" style="padding:8px 12px;border:2px solid #ddd;border-radius:8px;font-size:0.9rem;font-family:inherit;background:white;">
+                <option value="sonnet">Sonnet (빠름, 비용 적당)</option>
+                <option value="opus">Opus (고품질, 느림, 비쌈)</option>
+            </select>
+        </div>
+
         <!-- Custom Prompt -->
         <div class="custom-prompt-area" id="customPromptArea">
             <label>커스텀 프롬프트</label>
@@ -411,7 +420,7 @@
             <div id="resultsList"></div>
         </div>
         <div style="text-align:center;padding:24px 0 8px;font-size:0.75rem;color:#aaa;">
-            최종 업데이트: 2026-03-28 18:00
+            최종 업데이트: 2026-03-30 12:00
         </div>
     </div>
 
@@ -568,6 +577,7 @@
                         numbers: parsedData.map(d => d.number),
                         mode: currentMode,
                         customPrompt,
+                        model: document.getElementById('modelSelect').value,
                     }),
                 });
                 const data = await response.json();
